@@ -33,7 +33,8 @@ def get_models(model_name):
         from modules.llm.OpenRouter import OpenRouter
         return OpenRouter(model=MODEL_NAME_DICT[model_name])
     elif model_name.startswith('gpt'):
-        from modules.llm.LangChainGPT import LangChainGPT
+        # Use the alternative LangChainGPT2 which supports custom OPENAI_API_BASE
+        from modules.llm.LangChainGPT2 import LangChainGPT
         if model_name.startswith('gpt-3.5'):
             return LangChainGPT(model="gpt-3.5-turbo")
         elif model_name == 'gpt-4' or model_name == 'gpt-4-turbo':
@@ -61,6 +62,31 @@ def get_models(model_name):
         from modules.llm.Doubao import Doubao
         return Doubao()
     elif model_name.startswith('gemini'):
+        # Prefer Vertex Gemini when user indicates so via model prefix or env vars
+        use_vertex_env = os.getenv("USE_VERTEX_GEMINI", "").lower() in ["1", "true", "yes"]
+        has_google_creds = bool(os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "") or os.getenv("GOOGLE_CLOUD_PROJECT", ""))
+        is_vertex_prefix = model_name.startswith('vertex-gemini')
+
+        if is_vertex_prefix or use_vertex_env or has_google_creds:
+            try:
+                from modules.llm.VertexGemini2 import VertexGemini
+                # allow model names like 'vertex-gemini:gemini-1.5-pro-002' or 'vertex-gemini/gemini-2.0'
+                # parse after separator if provided
+                parsed_model = model_name
+                if ':' in model_name:
+                    parsed_model = model_name.split(':', 1)[1]
+                elif '/' in model_name:
+                    parsed_model = model_name.split('/', 1)[1]
+
+                # fall back to a sensible default if parsing produces empty
+                if not parsed_model or parsed_model == 'vertex-gemini':
+                    parsed_model = 'gemini-1.5-pro-002'
+
+                return VertexGemini(model=parsed_model)
+            except Exception as e:
+                # if Vertex client import fails, fall back to existing Gemini wrapper
+                print(f"VertexGemini import failed ({e}), falling back to generic Gemini client")
+
         from modules.llm.Gemini import Gemini
         if model_name.startswith('gemini-2.0'):
             return Gemini(model="gemini-2.0-flash")

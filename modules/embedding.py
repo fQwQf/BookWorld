@@ -38,13 +38,21 @@ class EmbeddingModel(EmbeddingFunction[Documents]):
         return embeddings
 
 class OpenAIEmbedding(EmbeddingFunction[Documents]):
-    def __init__(self, model_name="text-embedding-ada-002", base_url = "https://api.openai.com/v1/embeddings", api_key_field = "OPENAI_API_KEY"):
+    def __init__(self, model_name="text-embedding-ada-002", base_url=None, api_key_field = "OPENAI_API_KEY"):
         from openai import OpenAI
-            
-        self.client = OpenAI(
-            base_url = base_url,
-            api_key = os.environ[api_key_field]
-        )
+        # allow overriding base URL via OPENAI_API_BASE environment variable (e.g. apiyi mirror)
+        env_base = os.getenv('OPENAI_API_BASE', '')
+        if env_base:
+            # If env provided, it should point to the API root (e.g. https://api.apiyi.com/v1)
+            base_url = env_base
+        # default: base_url may be None, OpenAI client will use default
+        client_kwargs = {
+            'api_key': os.environ.get(api_key_field, None)
+        }
+        if base_url:
+            client_kwargs['base_url'] = base_url
+
+        self.client = OpenAI(**client_kwargs)
         self.model_name = model_name
 
     def __call__(self, input):
@@ -65,7 +73,7 @@ def get_embedding_model(embed_name, language='en'):
     online_model_dict = {
         "openai":
             {"model_name":"text-embedding-ada-002",
-             "url":"https://api.openai.com/v1/embeddings",
+             "url":"https://api.apiyi.com/v1/embeddings",
              "api_key_field":"OPENAI_API_KEY"},
 
     }

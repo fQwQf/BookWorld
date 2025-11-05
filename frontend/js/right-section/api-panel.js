@@ -42,26 +42,33 @@ class APIPanel {
              return;
         }
 
-        console.log('APIPanel: Initializing event listeners.');
-        this.setupEventListeners();
+        console.log('APIPanel: Frontend configuration disabled for security. Submit button will be disabled.');
+        // Disable submit to prevent accidental client-side credential submission
+        if (this.submitButton) {
+            this.submitButton.disabled = true;
+            // Remove any existing listener and add a friendly notice on click
+            this.submitButton.removeEventListener('click', this.handleSubmit);
+            this.submitButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('前端配置已禁用。请在服务器上编辑 config.json 并重启服务以更改 API 配置。');
+                return false;
+            });
+        }
+        // Also disable the API key input to make intent clear
+        if (this.apiKeyInput) {
+            this.apiKeyInput.disabled = true;
+        }
         this.initialized = true; 
         console.log('APIPanel: Event listeners initialized successfully.');
     }
 
     setupEventListeners() {
-        // Submit Button Listener
-        if (this.submitButton) {
-            this.submitButton.removeEventListener('click', this.handleSubmit);
-            // Add the listener
-            this.submitButton.addEventListener('click', this.handleSubmit);
-            console.log('APIPanel: Submit button listener attached.');
-        }
-
-        // Provider Select Listener
+        // Previously this attached submit/provider listeners; configuration is now backend-only.
         if (this.providerSelect) {
+            // Keep provider -> model UI dynamic, but do not allow submission
             this.providerSelect.removeEventListener('change', this.updateModelOptions);
             this.providerSelect.addEventListener('change', this.updateModelOptions);
-            console.log('APIPanel: Provider select listener attached.');
+            console.log('APIPanel: Provider select listener attached (read-only mode).');
         }
     }
 
@@ -77,6 +84,8 @@ class APIPanel {
             anthropic: ['claude-3.5-sonnet', 'claude-3.7-sonnet', 'claude-3.5-haiku'],
             alibaba: ['qwen-turbo', 'qwen-max','qwen-plus'],
             openrouter: ['gpt-4o-mini','gpt-4o','gemini-2.0-flash','claude-3.5-sonnet','deepseek-r1']
+            ,
+            google: ['gemini-2.0-flash', 'gemini-1.5-flash', 'vertex-gemini:gemini-1.5-pro-002']
         };
 
         const currentModelValue = this.modelSelect.value;
